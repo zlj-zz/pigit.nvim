@@ -82,4 +82,42 @@ function M.load(path)
   return data, nil
 end
 
+---Watch repos.json for changes and trigger callback
+---@param path string
+---@param on_change fun()
+---@return function stop_watcher
+function M.watch(path, on_change)
+  path = vim.fn.expand(path)
+  local uv = vim.uv or vim.loop
+  local watcher = uv.new_fs_event()
+
+  if not watcher then
+    vim.notify("pigit: fs_event not available", vim.log.levels.WARN)
+    return function() end
+  end
+
+  watcher:start(path, {}, function(err, fname, events)
+    if err then
+      return
+    end
+    vim.schedule(function()
+      local data, load_err = M.load(path)
+      if not load_err then
+        _cache.path = path
+        _cache.data = data
+        on_change()
+      end
+    end)
+  end)
+
+  return function()
+    if watcher then
+      local ok, _ = pcall(watcher.stop, watcher)
+      if ok then
+        watcher:close()
+      end
+    end
+  end
+end
+
 return M

@@ -43,6 +43,8 @@ M.defaults = {
     clean = "✓",
   },
   devicons = true,
+  pigit_cmd_whitelist = { "fetch", "pull", "push", "status" },
+  default_filter = "all",
   mappings = {
     repos = {},
     recent_files = {},

@@ -50,7 +50,7 @@ end
 
 function M.fetch_metadata(repo_path, callback)
   local meta = {}
-  local pending = 3
+  local pending = 4
   local has_error = false
 
   local function done()
@@ -109,6 +109,24 @@ function M.fetch_metadata(repo_path, callback)
         meta.last_commit_author = ""
         meta.last_commit_time = ""
         has_error = true
+      end
+      done()
+    end
+  )
+
+  M.run_cmd(
+    { "git", "rev-list", "--left-right", "--count", "HEAD...@{upstream}" },
+    repo_path,
+    function(code, out, err)
+      meta.ahead = 0
+      meta.behind = 0
+      if code == 0 then
+        local trimmed = vim.trim(out)
+        local ahead_str, behind_str = trimmed:match("(%d+)%s+(%d+)")
+        if ahead_str and behind_str then
+          meta.ahead = tonumber(ahead_str) or 0
+          meta.behind = tonumber(behind_str) or 0
+        end
       end
       done()
     end

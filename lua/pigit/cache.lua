@@ -4,7 +4,7 @@ M._store = {}
 M._last_picker_opened_at = 0
 M._warmup_timer = nil
 
-function M.get(repo_name, repo_path, ttl, callback)
+function M.get(repo_name, repo_path, ttl, callback, on_refresh)
   local entry = M._store[repo_name]
   local now = vim.loop.now() / 1000
 
@@ -15,6 +15,9 @@ function M.get(repo_name, repo_path, ttl, callback)
 
   if entry and entry.fetching then
     table.insert(entry.pending_callbacks, callback)
+    if on_refresh then
+      entry.on_refresh = on_refresh
+    end
     return
   end
 
@@ -24,12 +27,14 @@ function M.get(repo_name, repo_path, ttl, callback)
       fetched_at = 0,
       fetching = false,
       pending_callbacks = {},
+      on_refresh = nil,
     }
     M._store[repo_name] = entry
   end
 
   entry.fetching = true
   entry.pending_callbacks = { callback }
+  entry.on_refresh = on_refresh
 
   require("pigit.git").fetch_metadata(repo_path, function(err, meta)
     vim.schedule(function()
@@ -42,6 +47,11 @@ function M.get(repo_name, repo_path, ttl, callback)
         cb(err, meta)
       end
       entry.pending_callbacks = {}
+
+      if entry.on_refresh then
+        entry.on_refresh()
+        entry.on_refresh = nil
+      end
     end)
   end)
 end

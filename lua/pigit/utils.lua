@@ -53,4 +53,32 @@ function M.get_file_icon(file_path)
   return icon or "", hl or ""
 end
 
+---Register highlight groups
+function M.register_highlights()
+  local highlights = {
+    PigitRepoName = { default = true, link = "TelescopeResultsIdentifier" },
+    PigitBranch = { default = true, link = "TelescopeResultsConstant" },
+    PigitDirty = { default = true, link = "DiagnosticWarn" },
+    PigitClean = { default = true, link = "DiagnosticOk" },
+    PigitInvalid = { default = true, link = "DiagnosticError" },
+    PigitPath = { default = true, link = "TelescopeResultsComment" },
+  }
+  for name, hl in pairs(highlights) do
+    vim.api.nvim_set_hl(0, name, hl)
+  end
+end
+
+---Get human-readable filter label
+---@param mode string
+---@return string
+function M.get_filter_label(mode)
+  local labels = {
+    all = "All",
+    dirty = "Dirty",
+    clean = "Clean",
+    unpushed = "Unpushed",
+  }
+  return labels[mode] or "All"
+end
+
 return M

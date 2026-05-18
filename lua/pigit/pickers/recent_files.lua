@@ -29,22 +29,20 @@ function M.fetch_git_files(repo_path, depth, unique, callback)
       local seen = {}
 
       for line in out:gmatch("[^\r\n]+") do
-        if line ~= "" then
-          if unique then
-            if not seen[line] then
-              seen[line] = true
-              table.insert(files, {
-                path = line,
-                filename = require("pigit.utils").basename(line),
-              })
-            end
-          else
-            table.insert(files, {
-              path = line,
-              filename = require("pigit.utils").basename(line),
-            })
-          end
+        if line == "" then
+          goto continue
         end
+        if unique then
+          if seen[line] then
+            goto continue
+          end
+          seen[line] = true
+        end
+        table.insert(files, {
+          path = line,
+          filename = require("pigit.utils").basename(line),
+        })
+        ::continue::
       end
 
       callback(nil, files)

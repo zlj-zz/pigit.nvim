@@ -3,17 +3,7 @@ local M = {}
 function M.setup(opts)
   require("pigit.config").resolve(opts)
 
-  local highlights = {
-    PigitRepoName = { default = true, link = "TelescopeResultsIdentifier" },
-    PigitBranch = { default = true, link = "TelescopeResultsConstant" },
-    PigitDirty = { default = true, link = "DiagnosticWarn" },
-    PigitClean = { default = true, link = "DiagnosticOk" },
-    PigitInvalid = { default = true, link = "DiagnosticError" },
-    PigitPath = { default = true, link = "TelescopeResultsComment" },
-  }
-  for name, hl in pairs(highlights) do
-    vim.api.nvim_set_hl(0, name, hl)
-  end
+  require("pigit.utils").register_highlights()
 
   vim.api.nvim_create_user_command("PigitRepos", function(cmd_opts)
     require("pigit.pickers.repos").open({ default_text = cmd_opts.args })
@@ -44,8 +34,24 @@ function M.setup(opts)
   vim.api.nvim_create_user_command("PigitRefresh", function()
     require("pigit.cache").invalidate()
     require("pigit.repos").invalidate_cache()
+    local config = require("pigit.config").get()
+    config.hooks.after_refresh()
     vim.notify("pigit cache refreshed", vim.log.levels.INFO)
   end, { desc = "Invalidate pigit cache" })
+
+  local config = require("pigit.config").get()
+  local path = require("pigit.repos").resolve_path(config.repos_json_path)
+  local stop_watcher = require("pigit.repos").watch(path, function()
+    require("pigit.cache").invalidate()
+    require("pigit.repos").invalidate_cache()
+    vim.notify("pigit: repos.json changed, cache invalidated", vim.log.levels.INFO)
+  end)
+
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    callback = function()
+      stop_watcher()
+    end,
+  })
 end
 
 return M

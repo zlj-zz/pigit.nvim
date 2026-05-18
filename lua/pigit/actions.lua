@@ -51,4 +51,36 @@ function M.open_file(file_path)
   vim.cmd("edit " .. vim.fn.fnameescape(file_path))
 end
 
+---Run a whitelisted pigit command asynchronously
+---@param repo {name: string, path: string}
+---@param cmd string one of "fetch", "pull", "push", "status"
+function M.run_pigit_cmd(repo, cmd)
+  local config = require("pigit.config").get()
+
+  if not vim.tbl_contains(config.pigit_cmd_whitelist, cmd) then
+    vim.notify("pigit: command not allowed: " .. cmd, vim.log.levels.ERROR)
+    return
+  end
+
+  vim.notify("pigit: running " .. cmd .. " on " .. repo.name .. " ...", vim.log.levels.INFO)
+
+  local function handle_result(code, out, err)
+    if code ~= 0 then
+      vim.notify(
+        "pigit: " .. cmd .. " failed on " .. repo.name .. ": " .. (err or ""),
+        vim.log.levels.ERROR
+      )
+    else
+      vim.notify("pigit: " .. cmd .. " completed on " .. repo.name, vim.log.levels.INFO)
+      require("pigit.cache").invalidate(repo.name)
+    end
+  end
+
+  require("pigit.git").run_cmd(
+    { "pigit", "repo", cmd, repo.name },
+    repo.path,
+    handle_result
+  )
+end
+
 return M
