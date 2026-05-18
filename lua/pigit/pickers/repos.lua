@@ -261,6 +261,61 @@ function M.open(opts)
   }):find()
 end
 
+local _preview_ns = vim.api.nvim_create_namespace("pigit_preview")
+
+local function hl(bufnr, line, col_start, col_end, group)
+  vim.api.nvim_buf_add_highlight(bufnr, _preview_ns, group, line, col_start, col_end)
+end
+
+local function apply_highlights(bufnr, lines, meta)
+  if not vim.api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+
+  hl(bufnr, 0, 0, 5, "PigitLabel")
+  hl(bufnr, 0, 11, -1, "PigitRepoName")
+
+  hl(bufnr, 1, 0, 5, "PigitLabel")
+  hl(bufnr, 1, 11, -1, "PigitPath")
+
+  if not meta then
+    return
+  end
+
+  hl(bufnr, 2, 0, 7, "PigitLabel")
+  hl(bufnr, 2, 11, -1, "PigitBranch")
+
+  hl(bufnr, 3, 0, 7, "PigitLabel")
+  local status_pos = 11
+  if meta.staged then
+    hl(bufnr, 3, status_pos, status_pos + 1, "PigitStaged")
+    status_pos = status_pos + 1
+  end
+  if meta.unstaged then
+    hl(bufnr, 3, status_pos, status_pos + 1, "PigitUnstaged")
+    status_pos = status_pos + 1
+  end
+  if meta.untracked then
+    hl(bufnr, 3, status_pos, status_pos + 1, "PigitUntracked")
+  end
+
+  hl(bufnr, 4, 0, 6, "PigitLabel")
+  local ahead_len = #tostring(meta.ahead)
+  local behind_len = #tostring(meta.behind)
+  hl(bufnr, 4, 11, 11 + ahead_len, "PigitAhead")
+  hl(bufnr, 4, 13 + ahead_len, 20 + ahead_len, "PigitLabel")
+  hl(bufnr, 4, 21 + ahead_len, 21 + ahead_len + behind_len, "PigitBehind")
+
+  hl(bufnr, 6, 0, -1, "PigitSection")
+  hl(bufnr, 7, 0, -1, "PigitCommit")
+  hl(bufnr, 8, 0, -1, "PigitCommit")
+  hl(bufnr, 10, 0, -1, "PigitSection")
+
+  for i = 12, #lines do
+    hl(bufnr, i - 1, 0, -1, "PigitPath")
+  end
+end
+
 ---@return table previewer
 function M.make_previewer()
   local config = require("pigit.config").get()
@@ -281,8 +336,9 @@ function M.make_previewer()
       local cache = require("pigit.cache")
       local cached = cache._store[repo.name]
       local loading_line = nil
+      local meta = nil
       if cached and cached.data then
-        local meta = cached.data
+        meta = cached.data
         table.insert(lines, "Branch:    " .. meta.branch)
         table.insert(lines, "Status:    " .. (meta.staged and "+" or "") .. (meta.unstaged and "*" or "") .. (meta.untracked and "?" or ""))
         table.insert(lines, "Ahead:     " .. meta.ahead .. "  Behind: " .. meta.behind)
@@ -298,7 +354,10 @@ function M.make_previewer()
         table.insert(lines, config.messages.loading)
       end
 
-      vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+      local bufnr = self.state.bufnr
+      vim.api.nvim_buf_clear_namespace(bufnr, _preview_ns, 0, -1)
+      vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+      apply_highlights(bufnr, lines, meta)
 
       if loading_line then
         require("pigit.git").run_cmd(
@@ -308,7 +367,6 @@ function M.make_previewer()
             if code ~= 0 then return end
             vim.schedule(function()
               if my_id ~= preview_id then return end
-              local bufnr = self.state.bufnr
               if not vim.api.nvim_buf_is_valid(bufnr) then return end
               local file_lines = {}
               local count = 0
@@ -321,7 +379,11 @@ function M.make_previewer()
               if count == 0 then
                 table.insert(file_lines, "  " .. config.messages.no_recent_files)
               end
+              vim.api.nvim_buf_clear_namespace(bufnr, _preview_ns, loading_line, loading_line + 1)
               vim.api.nvim_buf_set_lines(bufnr, loading_line, loading_line + 1, false, file_lines)
+              for i = 1, #file_lines do
+                hl(bufnr, loading_line + i - 1, 0, -1, "PigitPath")
+              end
             end)
           end
         )

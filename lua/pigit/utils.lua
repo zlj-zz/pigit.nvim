@@ -57,6 +57,14 @@ function M.register_highlights()
     PigitClean = { default = true, link = "DiagnosticOk" },
     PigitInvalid = { default = true, link = "DiagnosticError" },
     PigitPath = { default = true, link = "TelescopeResultsComment" },
+    PigitLabel = { default = true, link = "TelescopeResultsField" },
+    PigitSection = { default = true, link = "TelescopeResultsTitle" },
+    PigitCommit = { default = true, link = "TelescopeResultsComment" },
+    PigitAhead = { default = true, link = "DiagnosticOk" },
+    PigitBehind = { default = true, link = "DiagnosticWarn" },
+    PigitStaged = { default = true, link = "DiagnosticOk" },
+    PigitUnstaged = { default = true, link = "DiagnosticWarn" },
+    PigitUntracked = { default = true, link = "DiagnosticInfo" },
   }
   for name, hl in pairs(highlights) do
     vim.api.nvim_set_hl(0, name, hl)
