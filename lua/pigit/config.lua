@@ -1,5 +1,52 @@
 local M = {}
 
+---@class PigitPickerConfig
+---@field theme string
+---@field layout_config table
+---@field previewer boolean
+
+---@class PigitCacheConfig
+---@field ttl number
+---@field max_workers number
+---@field initial_batch number
+---@field batch_size number
+---@field batch_interval_ms number
+
+---@class PigitIconsConfig
+---@field branch string
+---@field ahead string
+---@field behind string
+---@field unstaged string
+---@field staged string
+---@field untracked string
+---@field clean string
+
+---@class PigitHooksConfig
+---@field before_open fun(ctx: string)|fun()
+---@field before_cd fun(repo: {name: string, path: string})|fun()
+---@field after_cd fun(repo: {name: string, path: string})|fun()
+---@field before_leave fun(repo: {name: string, path: string})|fun()
+---@field after_refresh fun()|fun()
+
+---@class PigitConfig
+---@field repos_json_path string|nil
+---@field cd_scope "tcd"|"cd"|"lcd"
+---@field open_on_enter "none"|"empty"|"tree"|"recent_file"
+---@field picker PigitPickerConfig
+---@field cache PigitCacheConfig
+---@field recent_files_git_depth number
+---@field recent_files_git_unique boolean
+---@field recent_files_mode "git"|"hybrid"|"mru"
+---@field file_tree string|nil
+---@field icons PigitIconsConfig
+---@field devicons boolean
+---@field pigit_cmd_whitelist string[]
+---@field default_filter "all"|"dirty"|"clean"|"unpushed"
+---@field log_level "debug"|"info"|"warn"|"error"
+---@field messages table<string, string>
+---@field mappings table<string, table>
+---@field hooks PigitHooksConfig
+
 -- Deep copy to prevent user modifications from affecting defaults
 local function deep_copy(t)
   local result = {}
@@ -13,6 +60,7 @@ local function deep_copy(t)
   return result
 end
 
+---@type PigitConfig
 M.defaults = {
   repos_json_path = nil,
   cd_scope = "tcd",
@@ -77,11 +125,12 @@ M.defaults = {
   },
 }
 
+---@type PigitConfig|nil
 M._current = nil
 
 -- Resolve user options against defaults
 ---@param user_opts table|nil
----@return table
+---@return PigitConfig
 function M.resolve(user_opts)
   user_opts = user_opts or {}
   local config = deep_copy(M.defaults)
@@ -149,7 +198,7 @@ function M.resolve(user_opts)
   return config
 end
 
----@return table
+---@return PigitConfig
 function M.get()
   if not M._current then
     M._current = M.resolve()

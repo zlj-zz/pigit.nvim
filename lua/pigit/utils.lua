@@ -1,5 +1,6 @@
 local M = {}
 
+---@type string|nil
 local _detected_tree = nil
 
 ---Detect available file tree plugin (memoized after first call)
@@ -9,27 +10,22 @@ function M.detect_file_tree()
     return _detected_tree
   end
   local config = require("pigit.config").get()
-  if config.file_tree then
-    _detected_tree = config.file_tree
-    return _detected_tree
+  ---@type string
+  local tree
+  local file_tree = config.file_tree
+  if file_tree then
+    tree = file_tree
+  elseif pcall(require, "nvim-tree") then
+    tree = "nvim-tree"
+  elseif pcall(require, "neo-tree.command") then
+    tree = "neo-tree"
+  elseif pcall(require, "mini.files") then
+    tree = "mini.files"
+  else
+    tree = "netrw"
   end
-  local ok, _ = pcall(require, "nvim-tree")
-  if ok then
-    _detected_tree = "nvim-tree"
-    return _detected_tree
-  end
-  local ok2, _ = pcall(require, "neo-tree.command")
-  if ok2 then
-    _detected_tree = "neo-tree"
-    return _detected_tree
-  end
-  local ok3, _ = pcall(require, "mini.files")
-  if ok3 then
-    _detected_tree = "mini.files"
-    return _detected_tree
-  end
-  _detected_tree = "netrw"
-  return _detected_tree
+  _detected_tree = tree
+  return tree
 end
 
 ---@param path string
