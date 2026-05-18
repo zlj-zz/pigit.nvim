@@ -13,7 +13,7 @@ function M.command_picker(repo, on_select)
   local cmds = config.pigit_cmd_whitelist
 
   if #cmds == 0 then
-    vim.notify("pigit: no commands in whitelist", vim.log.levels.WARN)
+    vim.notify(config.messages.no_commands, vim.log.levels.WARN)
     return
   end
 

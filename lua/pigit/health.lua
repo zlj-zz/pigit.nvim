@@ -55,7 +55,7 @@ function M.check()
     end
 
     if #invalid > 0 then
-      vim.health.warn("Invalid repos (sampled): " .. table.concat(invalid, ", "))
+      vim.health.warn(config.messages.invalid_repo .. " (sampled): " .. table.concat(invalid, ", "))
     else
       vim.health.ok("All sampled repos valid")
     end

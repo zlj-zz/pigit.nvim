@@ -2,8 +2,21 @@ local M = {}
 
 function M.cd(repo, scope, open_on_enter)
   local config = require("pigit.config").get()
+  local utils = require("pigit.utils")
 
-  config.hooks.before_cd(repo)
+  local current_dir = vim.fn.getcwd()
+  local repos = require("pigit.repos")
+  local path = repos.resolve_path(config.repos_json_path)
+  local all_repos, _ = repos.load_cached(path)
+  for name, info in pairs(all_repos or {}) do
+    if utils.is_subpath(current_dir, info.path) and info.path ~= repo.path then
+      utils.safe_hook_call("before_leave", config.hooks.before_leave, { name = name, path = info.path })
+      break
+    end
+  end
+
+  utils.safe_hook_call("before_cd", config.hooks.before_cd, repo)
+
   vim.cmd[scope](repo.path)
 
   if open_on_enter == "empty" then
@@ -14,7 +27,7 @@ function M.cd(repo, scope, open_on_enter)
     require("pigit.pickers.recent_files").open(repo)
   end
 
-  config.hooks.after_cd(repo)
+  utils.safe_hook_call("after_cd", config.hooks.after_cd, repo)
 end
 
 ---@param repo_path string
@@ -53,22 +66,24 @@ end
 ---@param cmd string one of "fetch", "pull", "push", "status"
 function M.run_pigit_cmd(repo, cmd)
   local config = require("pigit.config").get()
+  local utils = require("pigit.utils")
 
   if not vim.tbl_contains(config.pigit_cmd_whitelist, cmd) then
-    vim.notify("pigit: command not allowed: " .. cmd, vim.log.levels.ERROR)
+    vim.notify(string.format(config.messages.command_not_allowed, cmd), vim.log.levels.ERROR)
     return
   end
 
-  vim.notify("pigit: running " .. cmd .. " on " .. repo.name .. " ...", vim.log.levels.INFO)
+  vim.notify(string.format(config.messages.running_cmd, cmd, repo.name), vim.log.levels.INFO)
+  utils.log("debug", "running pigit cmd: %s on %s", cmd, repo.name)
 
   local function handle_result(code, out, err)
     if code ~= 0 then
       vim.notify(
-        "pigit: " .. cmd .. " failed on " .. repo.name .. ": " .. (err or ""),
+        string.format(config.messages.cmd_failed, cmd, repo.name, err or ""),
         vim.log.levels.ERROR
       )
     else
-      vim.notify("pigit: " .. cmd .. " completed on " .. repo.name, vim.log.levels.INFO)
+      vim.notify(string.format(config.messages.cmd_completed, cmd, repo.name), vim.log.levels.INFO)
       require("pigit.cache").invalidate(repo.name)
     end
   end

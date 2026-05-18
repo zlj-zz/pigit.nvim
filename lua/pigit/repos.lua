@@ -94,7 +94,7 @@ function M.watch(path, on_change)
     return function() end
   end
 
-  watcher:start(path, {}, function(err, fname, events)
+  watcher:start(path, {}, function(err, _fname, _events)
     if err then
       return
     end
@@ -116,6 +116,23 @@ function M.watch(path, on_change)
       end
     end
   end
+end
+
+---Get repo by name (for extension usage)
+---@param name string
+---@return {name: string, path: string}|nil
+function M.get_by_name(name)
+  local config = require("pigit.config").get()
+  local path = M.resolve_path(config.repos_json_path)
+  local all_repos, err = M.load_cached(path)
+  if err then
+    return nil
+  end
+  local info = all_repos[name]
+  if not info then
+    return nil
+  end
+  return { name = name, path = info.path }
 end
 
 return M

@@ -29,9 +29,9 @@ M.defaults = {
     batch_size = 50,
     batch_interval_ms = 200,
   },
-  recent_files_mode = "git",
   recent_files_git_depth = 50,
   recent_files_git_unique = true,
+  recent_files_mode = "git",     -- "git" | "hybrid" | "mru"
   file_tree = nil,
   icons = {
     branch = "",
@@ -45,6 +45,25 @@ M.defaults = {
   devicons = true,
   pigit_cmd_whitelist = { "fetch", "pull", "push", "status" },
   default_filter = "all",
+  log_level = "warn",            -- "debug" | "info" | "warn" | "error"
+  messages = {
+    no_repos = "No managed repos. Run: pigit repo add <path>",
+    repo_not_found = "Repo not found: %s",
+    invalid_repo = "[invalid]",
+    no_commands = "pigit: no commands in whitelist",
+    command_not_allowed = "pigit: command not allowed: %s",
+    running_cmd = "pigit: running %s on %s ...",
+    cmd_failed = "pigit: %s failed on %s: %s",
+    cmd_completed = "pigit: %s completed on %s",
+    cache_refreshed = "pigit cache refreshed",
+    repos_changed = "pigit: repos.json changed, cache invalidated",
+    telescope_not_found = "pigit: telescope.nvim not found. Install: nvim-telescope/telescope.nvim",
+    repo_name_required = "pigit: repo name required",
+    fs_event_unavailable = "pigit: fs_event not available",
+    no_recent_files = "(no recent files)",
+    loading = "Loading...",
+    recent_files_loading = "(loading...)",
+  },
   mappings = {
     repos = {},
     recent_files = {},
@@ -89,6 +108,27 @@ function M.resolve(user_opts)
     error("invalid open_on_enter: " .. tostring(config.open_on_enter))
   end
 
+  -- Validate log_level
+  local valid_log = { debug = true, info = true, warn = true, error = true }
+  if not valid_log[config.log_level] then
+    error("invalid log_level: " .. tostring(config.log_level))
+  end
+
+  -- Validate recent_files_mode
+  local valid_modes = { git = true, hybrid = true, mru = true }
+  if not valid_modes[config.recent_files_mode] then
+    error("invalid recent_files_mode: " .. tostring(config.recent_files_mode))
+  end
+
+  -- Messages shallow override
+  if user_opts.messages then
+    for k, v in pairs(user_opts.messages) do
+      if type(v) == "string" then
+        config.messages[k] = v
+      end
+    end
+  end
+
   -- Hooks need shallow copy to avoid modifying default empty functions
   if user_opts.hooks then
     for k, v in pairs(user_opts.hooks) do
@@ -96,6 +136,11 @@ function M.resolve(user_opts)
         config.hooks[k] = v
       end
     end
+  end
+
+  -- PIGIT_DEBUG=1 forces debug log level
+  if vim.env.PIGIT_DEBUG == "1" then
+    config.log_level = "debug"
   end
 
   M._current = config

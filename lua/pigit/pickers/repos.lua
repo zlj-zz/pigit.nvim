@@ -87,11 +87,11 @@ function M.open(opts)
 
   local ok, _ = pcall(require, "telescope")
   if not ok then
-    vim.notify("pigit: telescope.nvim not found. Install: nvim-telescope/telescope.nvim", vim.log.levels.ERROR)
+    vim.notify(config.messages.telescope_not_found, vim.log.levels.ERROR)
     return
   end
 
-  config.hooks.before_open("repos")
+  utils.safe_hook_call("before_open", config.hooks.before_open, "repos")
 
   local path, err = repos.resolve_path(config.repos_json_path)
   if err then
@@ -277,10 +277,10 @@ function M.make_previewer()
         table.insert(lines, "  by " .. meta.last_commit_author .. " · " .. meta.last_commit_time)
         table.insert(lines, "")
         table.insert(lines, "Recent Files:")
-        table.insert(lines, "  (loading...)")
+        table.insert(lines, "  " .. config.messages.recent_files_loading)
         loading_line = #lines - 1
       else
-        table.insert(lines, "Loading...")
+        table.insert(lines, config.messages.loading)
       end
 
       vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
@@ -304,7 +304,7 @@ function M.make_previewer()
                 end
               end
               if count == 0 then
-                table.insert(file_lines, "  (no recent files)")
+                table.insert(file_lines, "  " .. config.messages.no_recent_files)
               end
               vim.api.nvim_buf_set_lines(bufnr, loading_line, loading_line + 1, false, file_lines)
             end)

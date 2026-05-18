@@ -78,4 +78,43 @@ function M.get_filter_label(mode)
   return labels[mode] or "All"
 end
 
+local _log_levels = { debug = 0, info = 1, warn = 2, error = 3 }
+
+---Debug logging with configurable level
+---@param level "debug"|"info"|"warn"|"error"
+---@param fmt string
+function M.log(level, fmt, ...)
+  local config = require("pigit.config").get()
+  local config_level = _log_levels[config.log_level] or 2
+  if _log_levels[level] >= config_level then
+    vim.notify(string.format("[pigit] " .. fmt, ...), vim.log.levels[level:upper()])
+  end
+end
+
+---Call a hook function safely, logging errors without propagating them
+---@param name string hook name for error messages
+---@param fn function hook function to call
+---@param ... any arguments to pass to the hook
+function M.safe_hook_call(name, fn, ...)
+  local ok, err = pcall(fn, ...)
+  if not ok then
+    M.log("error", "%s hook error: %s", name, err)
+  end
+end
+
+---Check if child path is a subpath of parent (handles trailing slashes)
+---@param child string
+---@param parent string
+---@return boolean
+function M.is_subpath(child, parent)
+  if #child < #parent then
+    return false
+  end
+  if child:sub(1, #parent) ~= parent then
+    return false
+  end
+  local next_char = child:sub(#parent + 1, #parent + 1)
+  return next_char == "" or next_char == "/" or next_char == "\\"
+end
+
 return M
