@@ -15,19 +15,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Neovim
-        uses: rhymond/setup-neovim@v1
-        with:
-          neovim-version: ${{ matrix.nvim-version }}
-
-      - name: Install plenary.nvim
+      - name: Install Neovim
         run: |
-          git clone --depth 1 https://github.com/nvim-lua/plenary.nvim ~/.local/share/nvim/site/pack/vendor/start/plenary.nvim
+          if [ "${{ matrix.nvim-version }}" = "nightly" ]; then
+            curl -fsSL https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.tar.gz -o nvim.tar.gz
+          else
+            curl -fsSL https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz -o nvim.tar.gz
+          fi
+          tar xzf nvim.tar.gz
+          sudo mv nvim-linux-x86_64 /opt/nvim
+          echo "/opt/nvim/bin" >> "$GITHUB_PATH"
+          /opt/nvim/bin/nvim --version
 
-      - name: Install telescope.nvim
+      - name: Install dependencies
         run: |
-          git clone --depth 1 https://github.com/nvim-telescope/telescope.nvim ~/.local/share/nvim/site/pack/vendor/start/telescope.nvim
+          mkdir -p ~/.local/share/nvim/lazy
+          git clone --depth 1 https://github.com/nvim-lua/plenary.nvim ~/.local/share/nvim/lazy/plenary.nvim
+          git clone --depth 1 https://github.com/nvim-telescope/telescope.nvim ~/.local/share/nvim/lazy/telescope.nvim
 
       - name: Run tests
         run: |
-          nvim --headless -u NONE -c "set rtp+=." -c "packadd plenary.nvim" -c "PlenaryBustedDirectory tests/ { minimal_init = 'tests/minimal_init.lua' }"
+          nvim --headless -u tests/minimal_init.lua -c "PlenaryBustedDirectory tests/ { minimal_init = 'tests/minimal_init.lua' }"
