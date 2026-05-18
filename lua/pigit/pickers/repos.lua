@@ -81,6 +81,8 @@ function M.format_entry(repo_name, repo_info, meta, config)
     value = { name = repo_name, path = repo_info.path },
     ordinal = repo_name .. " " .. (meta and meta.branch or "") .. " " .. repo_info.path,
     display = table.concat(display_parts, "  "),
+    filename = repo_info.path,
+    text = repo_name,
   }
 end
 
