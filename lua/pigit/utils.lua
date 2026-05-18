@@ -76,6 +76,78 @@ function M.get_filter_label(mode)
 end
 
 local _log_levels = { debug = 0, info = 1, warn = 2, error = 3 }
+local uv = vim.uv or vim.loop
+
+-- Cached log directory (resolved once per session)
+local _log_dir = nil
+
+local function get_log_dir()
+  if _log_dir then
+    return _log_dir
+  end
+  local pigit_home = vim.env.PIGIT_HOME
+  if pigit_home then
+    _log_dir = vim.fs.joinpath(pigit_home, "nvim")
+  else
+    local xdg = vim.env.XDG_CONFIG_HOME
+    if xdg then
+      _log_dir = vim.fs.joinpath(xdg, "pigit", "nvim")
+    else
+      local stdpath = vim.fn.stdpath("config")
+      if stdpath then
+        _log_dir = vim.fs.joinpath(stdpath, "pigit", "nvim")
+      else
+        _log_dir = vim.fs.joinpath(vim.fn.expand("~"), ".config", "pigit", "nvim")
+      end
+    end
+  end
+  vim.fn.mkdir(_log_dir, "p")
+  return _log_dir
+end
+
+---Delete log files older than 7 days
+local function cleanup_old_logs()
+  local dir = get_log_dir()
+  local ok, iter = pcall(uv.fs_scandir, dir)
+  if not ok or not iter then
+    return
+  end
+  local now = os.time()
+  local max_age = 7 * 24 * 60 * 60
+  while true do
+    local name, t = uv.fs_scandir_next(iter)
+    if not name then
+      break
+    end
+    if t == "file" and name:match("^pigit%-nvim%-%d%d%d%d%-%d%d%-%d%d%.log$") then
+      local path = vim.fs.joinpath(dir, name)
+      local stat = uv.fs_stat(path)
+      if stat and stat.mtime and (now - stat.mtime.sec) > max_age then
+        pcall(uv.fs_unlink, path)
+      end
+    end
+  end
+end
+
+---Append a log line to today's log file
+---@param level string
+---@param msg string
+local function write_log_file(level, msg)
+  local dir = get_log_dir()
+  local now = os.time()
+  local date = os.date("%Y-%m-%d", now)
+  local time = os.date("%H:%M:%S", now)
+  local path = vim.fs.joinpath(dir, "pigit-nvim-" .. date .. ".log")
+  local f = io.open(path, "a")
+  if not f then
+    return
+  end
+  f:write(string.format("[%s %s] [%s] %s\n", date, time, level:upper(), msg))
+  f:close()
+end
+
+-- Run cleanup once at module load to avoid blocking first log caller
+pcall(cleanup_old_logs)
 
 ---Debug logging with configurable level
 ---@param level "debug"|"info"|"warn"|"error"
@@ -84,7 +156,9 @@ function M.log(level, fmt, ...)
   local config = require("pigit.config").get()
   local config_level = _log_levels[config.log_level] or 2
   if _log_levels[level] >= config_level then
-    vim.notify(string.format("[pigit] " .. fmt, ...), vim.log.levels[level:upper()])
+    local msg = string.format(fmt, ...)
+    vim.notify("[pigit] " .. msg, vim.log.levels[level:upper()])
+    pcall(write_log_file, level, msg)
   end
 end
 
