@@ -16,8 +16,9 @@ end
 ---@param opts table|nil
 function M.setup(opts)
   require("pigit.config").resolve(opts)
-
-  require("pigit.utils").register_highlights()
+  local utils = require("pigit.utils")
+  utils.register_highlights()
+  utils.log("info", "pigit setup complete")
 
   vim.api.nvim_create_user_command("PigitRepos", function(cmd_opts)
     require("pigit.pickers.repos").open({ default_text = cmd_opts.args })
@@ -56,6 +57,7 @@ function M.setup(opts)
   local config = require("pigit.config").get()
   local path = require("pigit.repos").resolve_path(config.repos_json_path)
   local stop_watcher = require("pigit.repos").watch(path, function()
+    utils.log("debug", "repos.json changed on disk, invalidating cache")
     require("pigit.cache").invalidate()
     require("pigit.repos").invalidate_cache()
     vim.notify(config.messages.repos_changed, vim.log.levels.INFO)

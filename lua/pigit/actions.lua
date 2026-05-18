@@ -6,6 +6,7 @@ local M = {}
 function M.cd(repo, scope, open_on_enter)
   local config = require("pigit.config").get()
   local utils = require("pigit.utils")
+  utils.log("info", "cd to repo: %s (%s)", repo.name, repo.path)
 
   local current_dir = vim.fn.getcwd()
   local repos = require("pigit.repos")
@@ -37,6 +38,7 @@ end
 ---@param tree_type string|nil "netrw"|"nvim-tree"|"neo-tree"|"mini.files"
 function M.open_tree(repo_path, tree_type)
   tree_type = tree_type or require("pigit.utils").detect_file_tree()
+  require("pigit.utils").log("debug", "open tree: %s (%s)", tree_type, repo_path)
   if tree_type == "netrw" then
     vim.cmd("edit " .. vim.fn.fnameescape(repo_path))
   elseif tree_type == "nvim-tree" then
@@ -72,6 +74,7 @@ function M.run_pigit_cmd(repo, cmd)
   local utils = require("pigit.utils")
 
   if not vim.tbl_contains(config.pigit_cmd_whitelist, cmd) then
+    utils.log("warn", "command not in whitelist: %s", cmd)
     vim.notify(string.format(config.messages.command_not_allowed, cmd), vim.log.levels.ERROR)
     return
   end
@@ -81,11 +84,13 @@ function M.run_pigit_cmd(repo, cmd)
 
   local function handle_result(code, out, err)
     if code ~= 0 then
+      utils.log("error", "pigit cmd failed: %s on %s: %s", cmd, repo.name, err or "")
       vim.notify(
         string.format(config.messages.cmd_failed, cmd, repo.name, err or ""),
         vim.log.levels.ERROR
       )
     else
+      utils.log("info", "pigit cmd completed: %s on %s", cmd, repo.name)
       vim.notify(string.format(config.messages.cmd_completed, cmd, repo.name), vim.log.levels.INFO)
       require("pigit.cache").invalidate(repo.name)
     end

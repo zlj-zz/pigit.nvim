@@ -14,17 +14,21 @@ function M.get(repo_name, repo_path, ttl, callback, on_refresh)
   local now = vim.loop.now() / 1000
 
   if entry and entry.data and (now - entry.fetched_at) < ttl then
+    require("pigit.utils").log("debug", "cache hit: %s", repo_name)
     callback(nil, entry.data)
     return
   end
 
   if entry and entry.fetching then
+    require("pigit.utils").log("debug", "cache pending: %s", repo_name)
     table.insert(entry.pending_callbacks, callback)
     if on_refresh then
       entry.on_refresh = on_refresh
     end
     return
   end
+
+  require("pigit.utils").log("debug", "cache miss: %s", repo_name)
 
   if not entry then
     entry = {
@@ -46,6 +50,9 @@ function M.get(repo_name, repo_path, ttl, callback, on_refresh)
       if not err and meta then
         entry.data = meta
         entry.fetched_at = vim.loop.now() / 1000
+        require("pigit.utils").log("debug", "metadata fetched: %s", repo_name)
+      else
+        require("pigit.utils").log("warn", "metadata failed: %s, err=%s", repo_name, err or "unknown")
       end
       entry.fetching = false
       for _, cb in ipairs(entry.pending_callbacks) do
@@ -69,9 +76,11 @@ function M.invalidate(repo_name)
     if entry then
       entry.data = nil
       entry.fetched_at = 0
+      require("pigit.utils").log("debug", "cache invalidated: %s", repo_name)
     end
   else
     M._store = {}
+    require("pigit.utils").log("debug", "cache invalidated: all")
   end
 end
 
@@ -127,6 +136,7 @@ function M.start_warmup(repos, config)
   end
 
   M._warmup_timer = vim.defer_fn(process_batch, interval)
+  require("pigit.utils").log("debug", "warmup started: %d repos", total)
 end
 
 ---Cancel any pending warmup timer
@@ -134,6 +144,7 @@ function M.cancel_warmup()
   if M._warmup_timer then
     pcall(vim.fn.timer_stop, M._warmup_timer)
     M._warmup_timer = nil
+    require("pigit.utils").log("debug", "warmup cancelled")
   end
 end
 

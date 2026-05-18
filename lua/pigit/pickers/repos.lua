@@ -87,6 +87,7 @@ end
 ---@param opts table|nil
 function M.open(opts)
   opts = opts or {}
+  require("pigit.utils").log("debug", "opening repo picker")
   local config = require("pigit.config").get()
   local repos = require("pigit.repos")
   local cache = require("pigit.cache")
@@ -198,6 +199,7 @@ function M.open(opts)
       end))
 
       vim.keymap.set("i", "<C-d>", function()
+        require("pigit.utils").log("debug", "filter cycled to: %s", M.get_current_filter())
         local new_mode = M.cycle_filter()
         if current_picker then
           current_picker.prompt_border.prompt_title = "Managed Repos [" .. utils.get_filter_label(new_mode) .. "]"
@@ -210,16 +212,19 @@ function M.open(opts)
         if not selection then
           return
         end
+        require("pigit.utils").log("debug", "command picker opened for: %s", selection.value.name)
         require("pigit.pickers.common").command_picker(selection.value, function(cmd)
           actions_module.run_pigit_cmd(selection.value, cmd)
         end)
       end, { buffer = prompt_bufnr, nowait = true })
 
       vim.keymap.set("i", "<C-r>", with_selection(function(value)
+        require("pigit.utils").log("debug", "recent files picker opened for: %s", value.name)
         require("pigit.pickers.recent_files").open(value)
       end), { buffer = prompt_bufnr, nowait = true })
 
       vim.keymap.set("i", "<C-t>", with_selection(function(value)
+        require("pigit.utils").log("debug", "open tree for: %s", value.name)
         actions_module.open_tree(value.path)
       end), { buffer = prompt_bufnr, nowait = true })
 

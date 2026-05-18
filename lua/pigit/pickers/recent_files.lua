@@ -11,11 +11,13 @@ local action_state = require("telescope.actions.state")
 ---@param unique boolean
 ---@param callback fun(err: string|nil, files: table[]|nil)
 function M.fetch_git_files(repo_path, depth, unique, callback)
+  require("pigit.utils").log("debug", "fetching git files: depth=%d, unique=%s", depth, tostring(unique))
   require("pigit.git").run_cmd(
     { "git", "log", "--diff-filter=d", "--name-only", "-n", tostring(depth), "--pretty=format:" },
     repo_path,
     function(code, out, _)
       if code ~= 0 then
+        require("pigit.utils").log("warn", "git log failed for %s", repo_path)
         callback("git log failed", nil)
         return
       end
@@ -109,6 +111,7 @@ end
 ---@param opts table|nil
 function M.open(repo, opts)
   opts = opts or {}
+  require("pigit.utils").log("debug", "opening recent files picker: %s (mode=%s)", repo.name, require("pigit.config").get().recent_files_mode)
   local config = require("pigit.config").get()
   local utils = require("pigit.utils")
 
@@ -171,6 +174,7 @@ function M.open(repo, opts)
 
   M.fetch_git_files(repo.path, depth, unique, function(err, git_files)
     if err then
+      require("pigit.utils").log("error", "fetch_git_files failed: %s", err)
       vim.notify("pigit: " .. err, vim.log.levels.ERROR)
       return
     end

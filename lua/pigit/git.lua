@@ -15,6 +15,7 @@ local M = {}
 ---@param cwd string
 ---@param callback fun(code: number, stdout: string, stderr: string)
 function M.run_cmd(cmd, cwd, callback)
+  require("pigit.utils").log("debug", "git cmd: %s (cwd=%s)", table.concat(cmd, " "), cwd)
   if vim.system then
     vim.system(cmd, { cwd = cwd, text = true }, function(obj)
       vim.schedule(function()
@@ -95,6 +96,8 @@ function M.fetch_metadata(repo_path, callback)
     end
     done()
   end)
+
+  require("pigit.utils").log("debug", "fetching metadata: %s", repo_path)
 
   M.run_cmd({ "git", "status", "--porcelain" }, repo_path, function(code, out, err)
     meta.unstaged = false

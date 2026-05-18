@@ -61,6 +61,7 @@ function M.load(path)
   path = vim.fn.expand(path)
   local f = io.open(path, "r")
   if not f then
+    require("pigit.utils").log("warn", "repos.json not found: %s", path)
     return {}, "repos.json not found: " .. path
   end
   local content = f:read("*a")
@@ -68,6 +69,7 @@ function M.load(path)
 
   local ok, data = pcall(vim.json.decode, content)
   if not ok then
+    require("pigit.utils").log("warn", "invalid JSON in repos.json: %s", tostring(data))
     return {}, "invalid JSON in repos.json: " .. tostring(data)
   end
 
@@ -78,10 +80,12 @@ function M.load(path)
   -- Validate each entry has a path field
   for name, info in pairs(data) do
     if type(info) ~= "table" or type(info.path) ~= "string" then
+      require("pigit.utils").log("warn", "invalid entry in repos.json: %s", tostring(name))
       return {}, "invalid entry in repos.json: " .. tostring(name)
     end
   end
 
+  require("pigit.utils").log("debug", "repos.json loaded: %d repos", vim.tbl_count(data))
   return data, nil
 end
 
@@ -108,6 +112,7 @@ function M.watch(path, on_change)
       if not load_err then
         _cache.path = path
         _cache.data = data
+        require("pigit.utils").log("debug", "repos.json changed on disk, cache reloaded")
         on_change()
       end
     end)
