@@ -1,0 +1,27 @@
+# Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Lua
+luac.out
+*.lua.bak
+
+# Test / CI
+.coverage
+*.log
+tests/tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+*.iml
+
+# Temporary build artifacts
+*.tar.gz
+*.zip
