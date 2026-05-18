@@ -105,6 +105,8 @@ function M.merge_hybrid(git_files, mru_files)
   return merged
 end
 
+---@param repo {name: string, path: string}
+---@param opts table|nil
 function M.open(repo, opts)
   opts = opts or {}
   local config = require("pigit.config").get()

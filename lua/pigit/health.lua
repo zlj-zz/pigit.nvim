@@ -1,5 +1,7 @@
 local M = {}
 
+---Run all health checks for pigit.nvim
+---@return nil
 function M.check()
   vim.health.start("pigit.nvim")
 

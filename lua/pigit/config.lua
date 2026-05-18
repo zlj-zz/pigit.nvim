@@ -80,6 +80,8 @@ M.defaults = {
 M._current = nil
 
 -- Resolve user options against defaults
+---@param user_opts table|nil
+---@return table
 function M.resolve(user_opts)
   user_opts = user_opts or {}
   local config = deep_copy(M.defaults)
@@ -147,9 +149,10 @@ function M.resolve(user_opts)
   return config
 end
 
+---@return table
 function M.get()
   if not M._current then
-    M.resolve()
+    M._current = M.resolve()
   end
   return M._current
 end

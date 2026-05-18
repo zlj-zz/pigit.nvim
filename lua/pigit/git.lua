@@ -11,6 +11,9 @@ local M = {}
 ---@field last_commit_author string
 ---@field last_commit_time string
 
+---@param cmd string[]
+---@param cwd string
+---@param callback fun(code: number, stdout: string, stderr: string)
 function M.run_cmd(cmd, cwd, callback)
   if vim.system then
     vim.system(cmd, { cwd = cwd, text = true }, function(obj)
@@ -21,11 +24,13 @@ function M.run_cmd(cmd, cwd, callback)
   else
     local stdout_data = {}
     local stderr_data = {}
+    local stdout_pipe = vim.loop.new_pipe()
+    local stderr_pipe = vim.loop.new_pipe()
     local handle
     handle = vim.loop.spawn(cmd[1], {
       args = vim.list_slice(cmd, 2),
       cwd = cwd,
-      stdio = { nil, vim.loop.new_pipe(), vim.loop.new_pipe() },
+      stdio = { nil, stdout_pipe, stderr_pipe },
     }, function(code)
       vim.schedule(function()
         callback(code, table.concat(stdout_data), table.concat(stderr_data))
@@ -33,14 +38,33 @@ function M.run_cmd(cmd, cwd, callback)
       if handle then
         handle:close()
       end
+      if stdout_pipe then
+        stdout_pipe:close()
+      end
+      if stderr_pipe then
+        stderr_pipe:close()
+      end
     end)
 
-    vim.loop.read_start(handle:get_stdio(2), function(err, data)
+    if not handle then
+      if stdout_pipe then
+        stdout_pipe:close()
+      end
+      if stderr_pipe then
+        stderr_pipe:close()
+      end
+      vim.schedule(function()
+        callback(1, "", "spawn failed")
+      end)
+      return
+    end
+
+    vim.loop.read_start(stdout_pipe, function(err, data)
       if data then
         table.insert(stdout_data, data)
       end
     end)
-    vim.loop.read_start(handle:get_stdio(3), function(err, data)
+    vim.loop.read_start(stderr_pipe, function(err, data)
       if data then
         table.insert(stderr_data, data)
       end
@@ -48,6 +72,8 @@ function M.run_cmd(cmd, cwd, callback)
   end
 end
 
+---@param repo_path string
+---@param callback fun(err: string|nil, meta: GitMetadata|nil)
 function M.fetch_metadata(repo_path, callback)
   local meta = {}
   local pending = 4

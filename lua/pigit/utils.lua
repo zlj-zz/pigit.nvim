@@ -52,6 +52,7 @@ function M.get_file_icon(file_path)
   return icon or "", hl or ""
 end
 
+---Register default highlight groups for pigit
 function M.register_highlights()
   local highlights = {
     PigitRepoName = { default = true, link = "TelescopeResultsIdentifier" },

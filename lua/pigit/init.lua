@@ -13,6 +13,7 @@ function M.get_repo(name)
   return require("pigit.repos").get_by_name(name)
 end
 
+---@param opts table|nil
 function M.setup(opts)
   require("pigit.config").resolve(opts)
 

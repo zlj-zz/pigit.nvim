@@ -24,10 +24,12 @@ M.filters = {
   end,
 }
 
+---@return string
 function M.get_current_filter()
   return M._filter_modes[M._current_filter_idx] or "all"
 end
 
+---@return string
 function M.cycle_filter()
   M._current_filter_idx = M._current_filter_idx + 1
   if M._current_filter_idx > #M._filter_modes then
@@ -36,6 +38,11 @@ function M.cycle_filter()
   return M.get_current_filter()
 end
 
+---@param repo_name string
+---@param repo_info {path: string}
+---@param meta GitMetadata|nil
+---@param config table
+---@return table
 function M.format_entry(repo_name, repo_info, meta, config)
   local icons = config.icons
   local display_parts = { repo_name }
@@ -77,6 +84,7 @@ function M.format_entry(repo_name, repo_info, meta, config)
   }
 end
 
+---@param opts table|nil
 function M.open(opts)
   opts = opts or {}
   local config = require("pigit.config").get()
@@ -248,7 +256,9 @@ function M.open(opts)
   }):find()
 end
 
+---@return table previewer
 function M.make_previewer()
+  local config = require("pigit.config").get()
   local previewers = require("telescope.previewers")
   local preview_id = 0
 

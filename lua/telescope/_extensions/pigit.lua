@@ -6,9 +6,9 @@ end
 local pigit = require("pigit")
 
 return telescope.register_extension({
+  ---@param ext_config table|nil
+  ---@param _ table telescope global config (unused)
   setup = function(ext_config, _)
-    -- ext_config 允许用户传入选项
-    -- _ 是 telescope 的全局配置（保留参数位置，不使用）
     if ext_config then
       pigit.setup(vim.tbl_deep_extend("force", {}, ext_config))
     end

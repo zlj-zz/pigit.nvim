@@ -1,5 +1,8 @@
 local M = {}
 
+---@param repo {name: string, path: string}
+---@param scope "cd"|"tcd"|"lcd"
+---@param open_on_enter "none"|"empty"|"tree"|"recent_file"
 function M.cd(repo, scope, open_on_enter)
   local config = require("pigit.config").get()
   local utils = require("pigit.utils")

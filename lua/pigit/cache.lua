@@ -4,6 +4,11 @@ M._store = {}
 M._last_picker_opened_at = 0
 M._warmup_timer = nil
 
+---@param repo_name string
+---@param repo_path string
+---@param ttl number
+---@param callback fun(err: string|nil, meta: GitMetadata|nil)
+---@param on_refresh fun()|nil
 function M.get(repo_name, repo_path, ttl, callback, on_refresh)
   local entry = M._store[repo_name]
   local now = vim.loop.now() / 1000
@@ -57,6 +62,7 @@ function M.get(repo_name, repo_path, ttl, callback, on_refresh)
   end)
 end
 
+---@param repo_name string|nil
 function M.invalidate(repo_name)
   if repo_name then
     local entry = M._store[repo_name]
@@ -69,10 +75,13 @@ function M.invalidate(repo_name)
   end
 end
 
+---Record the current time as the last picker open time
 function M.record_picker_opened()
   M._last_picker_opened_at = vim.loop.now() / 1000
 end
 
+---@param timeout_sec number
+---@return boolean
 function M.is_picker_timeout(timeout_sec)
   if M._last_picker_opened_at == 0 then
     return true
@@ -120,6 +129,7 @@ function M.start_warmup(repos, config)
   M._warmup_timer = vim.defer_fn(process_batch, interval)
 end
 
+---Cancel any pending warmup timer
 function M.cancel_warmup()
   if M._warmup_timer then
     pcall(vim.fn.timer_stop, M._warmup_timer)

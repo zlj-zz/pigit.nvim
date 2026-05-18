@@ -3,7 +3,7 @@ local M = {}
 local _cache = { path = nil, data = nil }
 
 ---@param path string
----@return table|nil data, string|nil err
+---@return table data, string|nil err
 function M.load_cached(path)
   if _cache.path == path and _cache.data then
     return _cache.data, nil
@@ -16,11 +16,14 @@ function M.load_cached(path)
   return data, err
 end
 
+---Invalidate the in-memory repos.json cache
 function M.invalidate_cache()
   _cache.path = nil
   _cache.data = nil
 end
 
+---@param explicit_path string|nil
+---@return string
 function M.resolve_path(explicit_path)
   if explicit_path then
     return vim.fn.expand(explicit_path)
@@ -52,6 +55,8 @@ function M.resolve_path(explicit_path)
   end
 end
 
+---@param path string
+---@return table data, string|nil err
 function M.load(path)
   path = vim.fn.expand(path)
   local f = io.open(path, "r")
