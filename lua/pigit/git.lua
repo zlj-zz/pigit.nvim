@@ -114,6 +114,7 @@ function M.fetch_metadata(repo_path, callback)
     end
   )
 
+  -- No upstream branch is a common and valid state; don't flag as error.
   M.run_cmd(
     { "git", "rev-list", "--left-right", "--count", "HEAD...@{upstream}" },
     repo_path,

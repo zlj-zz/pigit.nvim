@@ -32,7 +32,6 @@ function M.detect_file_tree()
   return _detected_tree
 end
 
----Get basename of a path
 ---@param path string
 ---@return string
 function M.basename(path)
@@ -53,7 +52,6 @@ function M.get_file_icon(file_path)
   return icon or "", hl or ""
 end
 
----Register highlight groups
 function M.register_highlights()
   local highlights = {
     PigitRepoName = { default = true, link = "TelescopeResultsIdentifier" },
@@ -68,7 +66,6 @@ function M.register_highlights()
   end
 end
 
----Get human-readable filter label
 ---@param mode string
 ---@return string
 function M.get_filter_label(mode)

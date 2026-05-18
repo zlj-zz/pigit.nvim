@@ -2,7 +2,6 @@ local M = {}
 
 local _cache = { path = nil, data = nil }
 
----Load repos.json with in-memory caching
 ---@param path string
 ---@return table|nil data, string|nil err
 function M.load_cached(path)
@@ -17,7 +16,6 @@ function M.load_cached(path)
   return data, err
 end
 
----Invalidate the in-memory cache
 function M.invalidate_cache()
   _cache.path = nil
   _cache.data = nil

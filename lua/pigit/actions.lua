@@ -17,7 +17,6 @@ function M.cd(repo, scope, open_on_enter)
   config.hooks.after_cd(repo)
 end
 
----Open file tree at repo root
 ---@param repo_path string
 ---@param tree_type string|nil "netrw"|"nvim-tree"|"neo-tree"|"mini.files"
 function M.open_tree(repo_path, tree_type)
@@ -33,7 +32,6 @@ function M.open_tree(repo_path, tree_type)
   end
 end
 
----Open file in split
 ---@param file_path string
 ---@param split "vertical"|"horizontal"|"tab"
 function M.open_split(file_path, split)
@@ -45,7 +43,6 @@ function M.open_split(file_path, split)
   vim.cmd(cmd .. " " .. vim.fn.fnameescape(file_path))
 end
 
----Open file directly
 ---@param file_path string
 function M.open_file(file_path)
   vim.cmd("edit " .. vim.fn.fnameescape(file_path))

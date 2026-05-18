@@ -153,6 +153,7 @@ function M.open(opts)
         local cached = cache._store[repo.name]
         local meta = cached and cached.data or nil
 
+        -- Unloaded entries are kept to avoid list flicker while metadata warms up.
         if meta and not filter_fn(meta) then
           return nil
         end

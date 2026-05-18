@@ -6,7 +6,6 @@ local conf = require("telescope.config").values
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 
----Open a command selection picker
 ---@param repo {name: string, path: string}
 ---@param on_select fun(cmd: string)
 function M.command_picker(repo, on_select)

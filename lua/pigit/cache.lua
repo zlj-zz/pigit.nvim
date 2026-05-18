@@ -48,6 +48,7 @@ function M.get(repo_name, repo_path, ttl, callback, on_refresh)
       end
       entry.pending_callbacks = {}
 
+      -- Refresh picker when async metadata arrives so filtered entries update.
       if entry.on_refresh then
         entry.on_refresh()
         entry.on_refresh = nil
@@ -80,7 +81,6 @@ function M.is_picker_timeout(timeout_sec)
   return (now - M._last_picker_opened_at) > timeout_sec
 end
 
----Start background batch warmup after picker opens
 ---@param repos table[] array of {name: string, path: string}
 ---@param config table
 function M.start_warmup(repos, config)
@@ -120,7 +120,6 @@ function M.start_warmup(repos, config)
   M._warmup_timer = vim.defer_fn(process_batch, interval)
 end
 
----Cancel warmup if picker is closed
 function M.cancel_warmup()
   if M._warmup_timer then
     pcall(vim.fn.timer_stop, M._warmup_timer)
