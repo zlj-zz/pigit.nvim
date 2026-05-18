@@ -11,7 +11,7 @@ local M = {}
 ---@field last_commit_author string
 ---@field last_commit_time string
 
-local function run_cmd(cmd, cwd, callback)
+function M.run_cmd(cmd, cwd, callback)
   if vim.system then
     vim.system(cmd, { cwd = cwd, text = true }, function(obj)
       vim.schedule(function()
@@ -19,7 +19,6 @@ local function run_cmd(cmd, cwd, callback)
       end)
     end)
   else
-    -- Fallback to vim.loop.spawn
     local stdout_data = {}
     local stderr_data = {}
     local handle
@@ -36,13 +35,11 @@ local function run_cmd(cmd, cwd, callback)
       end
     end)
 
-    -- Read stdout
     vim.loop.read_start(handle:get_stdio(2), function(err, data)
       if data then
         table.insert(stdout_data, data)
       end
     end)
-    -- Read stderr
     vim.loop.read_start(handle:get_stdio(3), function(err, data)
       if data then
         table.insert(stderr_data, data)
@@ -63,8 +60,7 @@ function M.fetch_metadata(repo_path, callback)
     end
   end
 
-  -- 1. branch
-  run_cmd({ "git", "symbolic-ref", "--short", "HEAD" }, repo_path, function(code, out, err)
+  M.run_cmd({ "git", "symbolic-ref", "--short", "HEAD" }, repo_path, function(code, out, err)
     if code == 0 then
       meta.branch = vim.trim(out)
     else
@@ -74,8 +70,7 @@ function M.fetch_metadata(repo_path, callback)
     done()
   end)
 
-  -- 2. status
-  run_cmd({ "git", "status", "--porcelain" }, repo_path, function(code, out, err)
+  M.run_cmd({ "git", "status", "--porcelain" }, repo_path, function(code, out, err)
     meta.unstaged = false
     meta.staged = false
     meta.untracked = false
@@ -100,8 +95,7 @@ function M.fetch_metadata(repo_path, callback)
     done()
   end)
 
-  -- 3. last commit
-  run_cmd(
+  M.run_cmd(
     { "git", "log", "-1", "--format=%s|%an|%ar" },
     repo_path,
     function(code, out, err)

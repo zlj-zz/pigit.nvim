@@ -1,5 +1,28 @@
 local M = {}
 
+local _cache = { path = nil, data = nil }
+
+---Load repos.json with in-memory caching
+---@param path string
+---@return table|nil data, string|nil err
+function M.load_cached(path)
+  if _cache.path == path and _cache.data then
+    return _cache.data, nil
+  end
+  local data, err = M.load(path)
+  if not err then
+    _cache.path = path
+    _cache.data = data
+  end
+  return data, err
+end
+
+---Invalidate the in-memory cache
+function M.invalidate_cache()
+  _cache.path = nil
+  _cache.data = nil
+end
+
 function M.resolve_path(explicit_path)
   if explicit_path then
     return vim.fn.expand(explicit_path)

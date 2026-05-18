@@ -1,27 +1,23 @@
 local M = {}
 
--- Cache storage
--- { [repo_name] = { data = GitMetadata, fetched_at = number, fetching = boolean, pending_callbacks = function[] } }
 M._store = {}
 M._last_picker_opened_at = 0
+M._warmup_timer = nil
 
 function M.get(repo_name, repo_path, ttl, callback)
   local entry = M._store[repo_name]
-  local now = vim.loop.now() / 1000 -- convert to seconds
+  local now = vim.loop.now() / 1000
 
-  -- Hit and not expired
   if entry and entry.data and (now - entry.fetched_at) < ttl then
     callback(nil, entry.data)
     return
   end
 
-  -- Currently fetching, add to pending queue
   if entry and entry.fetching then
     table.insert(entry.pending_callbacks, callback)
     return
   end
 
-  -- Need to re-fetch
   if not entry then
     entry = {
       data = nil,
@@ -36,15 +32,12 @@ function M.get(repo_name, repo_path, ttl, callback)
   entry.pending_callbacks = { callback }
 
   require("pigit.git").fetch_metadata(repo_path, function(err, meta)
-    -- Execute in vim.schedule to ensure atomic state updates
     vim.schedule(function()
       if not err and meta then
         entry.data = meta
         entry.fetched_at = vim.loop.now() / 1000
       end
       entry.fetching = false
-
-      -- Notify all waiters
       for _, cb in ipairs(entry.pending_callbacks) do
         cb(err, meta)
       end
@@ -75,6 +68,54 @@ function M.is_picker_timeout(timeout_sec)
   end
   local now = vim.loop.now() / 1000
   return (now - M._last_picker_opened_at) > timeout_sec
+end
+
+---Start background batch warmup after picker opens
+---@param repos table[] array of {name: string, path: string}
+---@param config table
+function M.start_warmup(repos, config)
+  M.cancel_warmup()
+
+  local total = #repos
+  if total == 0 then
+    return
+  end
+
+  local batch_size = config.cache.batch_size
+  local interval = config.cache.batch_interval_ms
+  local index = 1
+
+  local function process_batch()
+    if index > total then
+      return
+    end
+    if M._warmup_timer == nil then
+      return -- cancelled
+    end
+
+    local end_idx = math.min(index + batch_size - 1, total)
+    for i = index, end_idx do
+      local repo = repos[i]
+      M.get(repo.name, repo.path, config.cache.ttl, function() end)
+    end
+
+    index = end_idx + 1
+    if index <= total then
+      M._warmup_timer = vim.defer_fn(process_batch, interval)
+    else
+      M._warmup_timer = nil
+    end
+  end
+
+  M._warmup_timer = vim.defer_fn(process_batch, interval)
+end
+
+---Cancel warmup if picker is closed
+function M.cancel_warmup()
+  if M._warmup_timer then
+    pcall(vim.fn.timer_stop, M._warmup_timer)
+    M._warmup_timer = nil
+  end
 end
 
 return M

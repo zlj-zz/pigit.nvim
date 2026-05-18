@@ -6,16 +6,12 @@ local conf = require("telescope.config").values
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 
--- Entry formatting
 function M.format_entry(repo_name, repo_info, meta, config)
   local icons = config.icons
   local display_parts = { repo_name }
 
   if meta then
-    -- branch
     table.insert(display_parts, icons.branch .. meta.branch)
-
-    -- status indicators
     local indicators = {}
     if meta.unstaged then
       table.insert(indicators, icons.unstaged)
@@ -35,7 +31,6 @@ function M.format_entry(repo_name, repo_info, meta, config)
     table.insert(display_parts, "")
   end
 
-  -- path (shortened)
   local short_path = vim.fn.fnamemodify(repo_info.path, ":~")
   table.insert(display_parts, short_path)
 
@@ -53,40 +48,35 @@ function M.open(opts)
   local cache = require("pigit.cache")
   local actions_module = require("pigit.actions")
 
-  -- Check telescope is available
   local ok, _ = pcall(require, "telescope")
   if not ok then
     vim.notify("pigit: telescope.nvim not found. Install: nvim-telescope/telescope.nvim", vim.log.levels.ERROR)
     return
   end
 
-  -- Resolve path
+  config.hooks.before_open("repos")
+
   local path, err = repos.resolve_path(config.repos_json_path)
   if err then
     vim.notify("pigit: " .. err, vim.log.levels.ERROR)
     return
   end
 
-  -- Load repos
-  local all_repos, load_err = repos.load(path)
+  local all_repos, load_err = repos.load_cached(path)
   if load_err then
     vim.notify("pigit: " .. load_err, vim.log.levels.ERROR)
     return
   end
 
-  -- Check picker timeout, invalidate cache if expired
   if cache.is_picker_timeout(300) then
     cache.invalidate()
   end
   cache.record_picker_opened()
 
-  -- Build repo list
   local repo_list = {}
   for name, info in pairs(all_repos) do
     table.insert(repo_list, { name = name, path = info.path })
   end
-
-  -- Sort by repo_name alphabetically
   table.sort(repo_list, function(a, b)
     return a.name < b.name
   end)
@@ -101,55 +91,85 @@ function M.open(opts)
     batch_count = batch_count + 1
   end
 
-  -- Telescope picker
+  -- Background warmup for remaining repos
+  local remaining = {}
+  for i = config.cache.initial_batch + 1, #repo_list do
+    table.insert(remaining, repo_list[i])
+  end
+  if #remaining > 0 then
+    cache.start_warmup(remaining, config)
+  end
+
   pickers.new(opts, {
     prompt_title = "Managed Repos",
     finder = finders.new_table({
       results = repo_list,
       entry_maker = function(repo)
-        local entry = M.format_entry(repo.name, repo, nil, config)
-        -- Try to get from cache (may be warmed up)
         local cached = cache._store[repo.name]
-        if cached and cached.data then
-          entry = M.format_entry(repo.name, repo, cached.data, config)
-        end
-        return entry
+        local meta = cached and cached.data or nil
+        return M.format_entry(repo.name, repo, meta, config)
       end,
     }),
     sorter = conf.generic_sorter(opts),
     previewer = config.picker.previewer and M.make_previewer() or nil,
     attach_mappings = function(prompt_bufnr, _)
-      -- Default <CR>: cd
-      actions.select_default:replace(function()
-        local selection = action_state.get_selected_entry()
-        if not selection then
-          return
+      local function with_selection(fn)
+        return function()
+          local selection = action_state.get_selected_entry()
+          if not selection then return end
+          actions.close(prompt_bufnr)
+          fn(selection.value)
         end
-        actions.close(prompt_bufnr)
-        actions_module.cd(selection.value, config.cd_scope, config.open_on_enter)
-      end)
+      end
+
+      actions.select_default:replace(with_selection(function(value)
+        actions_module.cd(value, config.cd_scope, config.open_on_enter)
+      end))
+
+      vim.keymap.set("i", "<C-r>", with_selection(function(value)
+        require("pigit.pickers.recent_files").open(value)
+      end), { buffer = prompt_bufnr, nowait = true })
+
+      vim.keymap.set("i", "<C-t>", with_selection(function(value)
+        actions_module.open_tree(value.path)
+      end), { buffer = prompt_bufnr, nowait = true })
+
+      vim.keymap.set("i", "<C-v>", with_selection(function(value)
+        actions_module.open_split(value.path, "vertical")
+      end), { buffer = prompt_bufnr, nowait = true })
+
+      vim.keymap.set("i", "<C-x>", with_selection(function(value)
+        actions_module.open_split(value.path, "horizontal")
+      end), { buffer = prompt_bufnr, nowait = true })
 
       return true
     end,
+    on_complete = {
+      function()
+        cache.cancel_warmup()
+      end,
+    },
   }):find()
 end
 
--- Simple previewer (v0.1.0 basic version)
 function M.make_previewer()
   local previewers = require("telescope.previewers")
+  local preview_id = 0
 
   return previewers.new_buffer_previewer({
     title = "Repo Info",
     define_preview = function(self, entry, _)
+      preview_id = preview_id + 1
+      local my_id = preview_id
       local repo = entry.value
       local lines = {
         "Repo:      " .. repo.name,
         "Path:      " .. repo.path,
       }
 
-      -- Try to get metadata from cache
       local cache = require("pigit.cache")
       local cached = cache._store[repo.name]
+      local loading_line = nil
       if cached and cached.data then
         local meta = cached.data
         table.insert(lines, "Branch:    " .. meta.branch)
@@ -158,11 +178,42 @@ function M.make_previewer()
         table.insert(lines, "Last Commit:")
         table.insert(lines, "  " .. meta.last_commit_msg)
         table.insert(lines, "  by " .. meta.last_commit_author .. " · " .. meta.last_commit_time)
+        table.insert(lines, "")
+        table.insert(lines, "Recent Files:")
+        table.insert(lines, "  (loading...)")
+        loading_line = #lines - 1
       else
         table.insert(lines, "Loading...")
       end
 
       vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+
+      if loading_line then
+        require("pigit.git").run_cmd(
+          { "git", "log", "--diff-filter=d", "--name-only", "-n", "5", "--pretty=format:" },
+          repo.path,
+          function(code, out, _)
+            if code ~= 0 then return end
+            vim.schedule(function()
+              if my_id ~= preview_id then return end
+              local bufnr = self.state.bufnr
+              if not vim.api.nvim_buf_is_valid(bufnr) then return end
+              local file_lines = {}
+              local count = 0
+              for line in out:gmatch("[^\r\n]+") do
+                if line ~= "" and count < 5 then
+                  table.insert(file_lines, "  " .. line)
+                  count = count + 1
+                end
+              end
+              if count == 0 then
+                table.insert(file_lines, "  (no recent files)")
+              end
+              vim.api.nvim_buf_set_lines(bufnr, loading_line, loading_line + 1, false, file_lines)
+            end)
+          end
+        )
+      end
     end,
   })
 end
