@@ -4,6 +4,8 @@ local M = {}
 M.pickers = {
   repos = require("pigit.pickers.repos"),
   recent_files = require("pigit.pickers.recent_files"),
+  branches = require("pigit.pickers.branches"),
+  status = require("pigit.pickers.status"),
 }
 
 ---Get repo by name (for extension usage)
@@ -53,6 +55,20 @@ function M.setup(opts)
     require("pigit.utils").safe_hook_call("after_refresh", config.hooks.after_refresh)
     vim.notify(config.messages.cache_refreshed, vim.log.levels.INFO)
   end, { desc = "Invalidate pigit cache" })
+
+  vim.api.nvim_create_user_command("PigitBranches", function(cmd_opts)
+    local args = cmd_opts.args
+    require("pigit.pickers.branches").open({
+      repo_name = args ~= "" and args or nil,
+    })
+  end, { nargs = "?", desc = "Open branch picker for current or specified repo" })
+
+  vim.api.nvim_create_user_command("PigitStatus", function(cmd_opts)
+    local args = cmd_opts.args
+    require("pigit.pickers.status").open({
+      repo_name = args ~= "" and args or nil,
+    })
+  end, { nargs = "?", desc = "Open git status picker for current or specified repo" })
 
   local config = require("pigit.config").get()
   local path = require("pigit.repos").resolve_path(config.repos_json_path)

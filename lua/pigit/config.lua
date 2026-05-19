@@ -111,6 +111,11 @@ M.defaults = {
     no_recent_files = "(no recent files)",
     loading = "Loading...",
     recent_files_loading = "(loading...)",
+    not_in_repo = "pigit: current directory is not a managed repo",
+    branch_checkout_failed = "pigit: failed to checkout branch: %s",
+    branch_checkout_success = "pigit: checked out %s",
+    no_branches = "(no branches)",
+    no_status_changes = "(no changes)",
   },
   mappings = {
     repos = {},

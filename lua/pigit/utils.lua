@@ -196,4 +196,51 @@ function M.is_subpath(child, parent)
   return next_char == "" or next_char == "/" or next_char == "\\"
 end
 
+---Detect which managed repo the current cwd belongs to
+---@return {name: string, path: string}|nil repo, string|nil err
+function M.resolve_current_repo()
+  local config = require("pigit.config").get()
+  local repos = require("pigit.repos")
+  local path = repos.resolve_path(config.repos_json_path)
+  local all_repos, err = repos.load_cached(path)
+  if err then
+    return nil, err
+  end
+  local cwd = vim.fn.getcwd()
+  for name, info in pairs(all_repos) do
+    if M.is_subpath(cwd, info.path) then
+      return { name = name, path = info.path }, nil
+    end
+  end
+  return nil, config.messages.not_in_repo
+end
+
+---Resolve target repo from picker opts
+---@param opts table
+---@return {name: string, path: string}|nil repo, string|nil err
+function M.resolve_repo(opts)
+  if opts.repo then
+    return opts.repo, nil
+  end
+  if opts.repo_name then
+    local repo = require("pigit.repos").get_by_name(opts.repo_name)
+    if not repo then
+      return nil, string.format(require("pigit.config").get().messages.repo_not_found, opts.repo_name)
+    end
+    return repo, nil
+  end
+  return M.resolve_current_repo()
+end
+
+---Ensure telescope.nvim is installed
+---@return boolean
+function M.ensure_telescope()
+  local ok, _ = pcall(require, "telescope")
+  if not ok then
+    vim.notify(require("pigit.config").get().messages.telescope_not_found, vim.log.levels.ERROR)
+    return false
+  end
+  return true
+end
+
 return M

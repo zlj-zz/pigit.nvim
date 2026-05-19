@@ -6,6 +6,9 @@ local conf = require("telescope.config").values
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 
+local branches_picker = require("pigit.pickers.branches")
+local status_picker = require("pigit.pickers.status")
+
 M._filter_modes = { "all", "dirty", "clean", "unpushed" }
 M._current_filter_idx = 1
 
@@ -236,6 +239,16 @@ function M.open(opts)
 
       vim.keymap.set("i", "<C-x>", with_selection(function(value)
         actions_module.open_split(value.path, "horizontal")
+      end), { buffer = prompt_bufnr, nowait = true })
+
+      vim.keymap.set("i", "<C-b>", with_selection(function(value)
+        require("pigit.utils").log("debug", "branch picker opened for: %s", value.name)
+        branches_picker.open({ repo = value })
+      end), { buffer = prompt_bufnr, nowait = true })
+
+      vim.keymap.set("i", "<C-s>", with_selection(function(value)
+        require("pigit.utils").log("debug", "status picker opened for: %s", value.name)
+        status_picker.open({ repo = value })
       end), { buffer = prompt_bufnr, nowait = true })
 
       return true
