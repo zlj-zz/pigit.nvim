@@ -7,6 +7,8 @@ A Neovim plugin that bridges the [`pigit`](https://github.com/zlj-zz/pigit) Pyth
 - **Repo picker** — Fuzzy-find across all repos registered in `pigit`'s `repos.json`
 - **Smart filters** — Toggle between All / Dirty / Clean / Unpushed repos without restarting the picker
 - **Recent files picker** — Open recently changed files per repo via `git log`, MRU (`vim.v.oldfiles`), or a hybrid merge of both
+- **Branch picker** — List and checkout branches for the current (or specified) repo
+- **Status picker** — Browse changed files in the current repo and open them with `<CR>`, `<C-v>`, or `<C-x>`
 - **One-key workflows** — `<CR>` to cd, `<C-r>` for recent files, `<C-t>` for file tree, `<C-v>`/`<C-x>` for splits
 - **Async metadata** — Git status, branch, ahead/behind, and last commit info loads in the background with TTL caching
 - **Pigit commands** — Run whitelisted `pigit` commands (`fetch`, `pull`, `push`, `status`) directly from the repo picker
@@ -115,6 +117,8 @@ require("pigit").setup({
 |---------|------|-------------|
 | `:PigitRepos` | `[query]` | Open the repo picker (optionally pre-filled with search text) |
 | `:PigitRecentFiles` | `<repo_name>` | Open recent files picker for a specific repo |
+| `:PigitBranches` | `[repo_name]` | Open branch picker for current repo (or specified repo) |
+| `:PigitStatus` | `[repo_name]` | Open git status picker for current repo (or specified repo) |
 | `:PigitRefresh` | — | Invalidate all caches and reload `repos.json` |
 
 ## Repo picker keymaps
@@ -128,6 +132,22 @@ require("pigit").setup({
 | `<C-x>` | Open repo in horizontal split |
 | `<C-d>` | Cycle filter (All → Dirty → Clean → Unpushed) |
 | `<C-g>` | Run a whitelisted pigit command on selected repo |
+| `<C-b>` | Open branch picker for selected repo |
+| `<C-s>` | Open git status picker for selected repo |
+
+## Branch picker keymaps
+
+| Key | Action |
+|-----|--------|
+| `<CR>` | Checkout the selected branch |
+
+## Status picker keymaps
+
+| Key | Action |
+|-----|--------|
+| `<CR>` | Open file (`cd_scope` to repo first) |
+| `<C-v>` | Open file in vertical split |
+| `<C-x>` | Open file in horizontal split |
 
 ## Hooks
 
