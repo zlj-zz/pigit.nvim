@@ -23,7 +23,7 @@ M.filters = {
     return meta and not (meta.unstaged or meta.staged or meta.untracked)
   end,
   unpushed = function(meta)
-    return meta and meta.ahead > 0
+    return meta and (meta.ahead or 0) > 0
   end,
 }
 
@@ -51,12 +51,12 @@ function M.format_entry(repo_name, repo_info, meta, config)
   local display_parts = { repo_name }
 
   if meta then
-    table.insert(display_parts, icons.branch .. meta.branch)
+    table.insert(display_parts, icons.branch .. (meta.branch or "?"))
     local indicators = {}
-    if meta.ahead > 0 then
+    if (meta.ahead or 0) > 0 then
       table.insert(indicators, icons.ahead .. meta.ahead)
     end
-    if meta.behind > 0 then
+    if (meta.behind or 0) > 0 then
       table.insert(indicators, icons.behind .. meta.behind)
     end
     if meta.unstaged then
@@ -315,8 +315,10 @@ local function apply_highlights(bufnr, lines, meta)
   end
 
   hl(bufnr, 4, 0, 6, "PigitLabel")
-  local ahead_len = #tostring(meta.ahead)
-  local behind_len = #tostring(meta.behind)
+  local ahead_val = meta.ahead or 0
+  local behind_val = meta.behind or 0
+  local ahead_len = #tostring(ahead_val)
+  local behind_len = #tostring(behind_val)
   hl(bufnr, 4, 11, 11 + ahead_len, "PigitAhead")
   hl(bufnr, 4, 13 + ahead_len, 20 + ahead_len, "PigitLabel")
   hl(bufnr, 4, 21 + ahead_len, 21 + ahead_len + behind_len, "PigitBehind")
@@ -354,13 +356,13 @@ function M.make_previewer()
       local meta = nil
       if cached and cached.data then
         meta = cached.data
-        table.insert(lines, "Branch:    " .. meta.branch)
+        table.insert(lines, "Branch:    " .. (meta.branch or "?"))
         table.insert(lines, "Status:    " .. (meta.staged and "+" or "") .. (meta.unstaged and "*" or "") .. (meta.untracked and "?" or ""))
-        table.insert(lines, "Ahead:     " .. meta.ahead .. "  Behind: " .. meta.behind)
+        table.insert(lines, "Ahead:     " .. (meta.ahead or 0) .. "  Behind: " .. (meta.behind or 0))
         table.insert(lines, "")
         table.insert(lines, "Last Commit:")
-        table.insert(lines, "  " .. meta.last_commit_msg)
-        table.insert(lines, "  by " .. meta.last_commit_author .. " · " .. meta.last_commit_time)
+        table.insert(lines, "  " .. (meta.commit_msg or ""))
+        table.insert(lines, "  by " .. (meta.commit_author or "") .. " · " .. (meta.commit_time or ""))
         table.insert(lines, "")
         table.insert(lines, "Recent Files:")
         table.insert(lines, "  " .. config.messages.recent_files_loading)

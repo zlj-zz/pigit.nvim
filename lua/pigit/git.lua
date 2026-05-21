@@ -1,15 +1,16 @@
 local M = {}
 
 ---@class GitMetadata
----@field branch string
----@field ahead number
----@field behind number
----@field unstaged boolean
----@field staged boolean
----@field untracked boolean
----@field last_commit_msg string
----@field last_commit_author string
----@field last_commit_time string
+---@field branch string|nil
+---@field ahead number|nil
+---@field behind number|nil
+---@field unstaged boolean|nil
+---@field staged boolean|nil
+---@field untracked boolean|nil
+---@field commit_msg string|nil
+---@field commit_author string|nil
+---@field commit_time string|nil
+---@field index_mtime number|nil
 
 ---@param cmd string[]
 ---@param cwd string
@@ -130,13 +131,13 @@ function M.fetch_metadata(repo_path, callback)
     function(code, out, err)
       if code == 0 then
         local parts = vim.split(vim.trim(out), "|")
-        meta.last_commit_msg = parts[1] or ""
-        meta.last_commit_author = parts[2] or ""
-        meta.last_commit_time = parts[3] or ""
+        meta.commit_msg = parts[1] or ""
+        meta.commit_author = parts[2] or ""
+        meta.commit_time = parts[3] or ""
       else
-        meta.last_commit_msg = ""
-        meta.last_commit_author = ""
-        meta.last_commit_time = ""
+        meta.commit_msg = ""
+        meta.commit_author = ""
+        meta.commit_time = ""
         has_error = true
       end
       done()

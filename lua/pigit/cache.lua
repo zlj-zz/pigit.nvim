@@ -4,6 +4,16 @@ M._store = {}
 M._last_picker_opened_at = 0
 M._warmup_timer = nil
 
+local function new_entry()
+  return {
+    data = nil,
+    fetched_at = 0,
+    fetching = false,
+    pending_callbacks = {},
+    on_refresh = nil,
+  }
+end
+
 ---@param repo_name string
 ---@param repo_path string
 ---@param ttl number
@@ -28,16 +38,48 @@ function M.get(repo_name, repo_path, ttl, callback, on_refresh)
     return
   end
 
+  -- L2: repos.json persistent cache
+  if not entry or not entry.data then
+    local repos_mod = require("pigit.repos")
+    local config = require("pigit.config").get()
+    local repos_path = repos_mod.resolve_path(config.repos_json_path)
+    local all_repos, _ = repos_mod.load_cached(repos_path)
+    local repo_info = all_repos and all_repos[repo_name]
+
+    if repo_info and repo_info.meta and repo_info.meta.index_mtime then
+      local uv = vim.uv or vim.loop
+      local stat = uv.fs_stat(vim.fs.joinpath(repo_path, ".git", "index"))
+      if stat and stat.mtime.sec == repo_info.meta.index_mtime then
+        if not entry then
+          entry = new_entry()
+          M._store[repo_name] = entry
+        end
+        local meta = vim.tbl_extend("force", {}, repo_info.meta)
+        meta.branch = meta.branch or "?"
+        meta.ahead = tonumber(meta.ahead) or 0
+        meta.behind = tonumber(meta.behind) or 0
+        meta.unstaged = meta.unstaged or meta.dirty or false
+        meta.staged = meta.staged or false
+        meta.untracked = meta.untracked or false
+        meta.commit_msg = meta.commit_msg or ""
+        meta.commit_author = meta.commit_author or ""
+        meta.commit_time = meta.commit_time or ""
+        entry.data = meta
+        entry.fetched_at = now
+        require("pigit.utils").log("debug", "L2 cache hit: %s", repo_name)
+        callback(nil, meta)
+        if on_refresh then
+          on_refresh()
+        end
+        return
+      end
+    end
+  end
+
   require("pigit.utils").log("debug", "cache miss: %s", repo_name)
 
   if not entry then
-    entry = {
-      data = nil,
-      fetched_at = 0,
-      fetching = false,
-      pending_callbacks = {},
-      on_refresh = nil,
-    }
+    entry = new_entry()
     M._store[repo_name] = entry
   end
 
