@@ -32,6 +32,8 @@ local M = {}
 ---@field repos_json_path string|nil
 ---@field cd_scope "tcd"|"cd"|"lcd"
 ---@field open_on_enter "none"|"empty"|"tree"|"recent_file"
+---@field close_buffers_on_leave boolean
+---@field auto_cd_on_open boolean
 ---@field picker PigitPickerConfig
 ---@field cache PigitCacheConfig
 ---@field recent_files_git_depth number
@@ -65,6 +67,8 @@ M.defaults = {
   repos_json_path = nil,
   cd_scope = "tcd",
   open_on_enter = "none",
+  close_buffers_on_leave = true,
+  auto_cd_on_open = true,
   picker = {
     theme = "dropdown",
     layout_config = {},

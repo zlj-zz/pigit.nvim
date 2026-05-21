@@ -9,14 +9,17 @@ function M.cd(repo, scope, open_on_enter)
   utils.log("info", "cd to repo: %s (%s)", repo.name, repo.path)
 
   local current_dir = vim.fn.getcwd()
-  local repos = require("pigit.repos")
-  local path = repos.resolve_path(config.repos_json_path)
-  local all_repos, _ = repos.load_cached(path)
-  for name, info in pairs(all_repos or {}) do
-    if utils.is_subpath(current_dir, info.path) and info.path ~= repo.path then
-      utils.safe_hook_call("before_leave", config.hooks.before_leave, { name = name, path = info.path })
-      break
-    end
+  if current_dir == repo.path then
+    return
+  end
+
+  local current_repo, _ = utils.resolve_current_repo()
+  if current_repo and current_repo.path ~= repo.path then
+    utils.safe_hook_call("before_leave", config.hooks.before_leave, current_repo)
+  end
+
+  if config.close_buffers_on_leave then
+    M.close_buffers()
   end
 
   utils.safe_hook_call("before_cd", config.hooks.before_cd, repo)
@@ -101,6 +104,15 @@ function M.run_pigit_cmd(repo, cmd)
     repo.path,
     handle_result
   )
+end
+
+function M.close_buffers()
+  for _, buf in ipairs(vim.fn.getbufinfo({ bufloaded = 1 })) do
+    local buftype = vim.fn.getbufvar(buf.bufnr, "&buftype")
+    if buftype == "" and buf.changed == 0 then
+      pcall(vim.api.nvim_buf_delete, buf.bufnr, {})
+    end
+  end
 end
 
 return M

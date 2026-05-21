@@ -71,6 +71,39 @@ function M.setup(opts)
   end, { nargs = "?", desc = "Open git status picker for current or specified repo" })
 
   local config = require("pigit.config").get()
+
+  if config.auto_cd_on_open then
+    vim.api.nvim_create_autocmd("BufReadPost", {
+      group = vim.api.nvim_create_augroup("PigitAutoCd", { clear = true }),
+      callback = function()
+        local buf = vim.api.nvim_get_current_buf()
+        local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
+        if buftype ~= "" then
+          return
+        end
+        local filepath = vim.api.nvim_buf_get_name(buf)
+        if filepath == "" then
+          return
+        end
+        local repos = require("pigit.repos")
+        local repos_path = repos.resolve_path(config.repos_json_path)
+        local all_repos, _ = repos.load_cached(repos_path)
+        if not all_repos then
+          return
+        end
+        for name, info in pairs(all_repos) do
+          if require("pigit.utils").is_subpath(filepath, info.path) then
+            local cwd = vim.fn.getcwd()
+            if cwd ~= info.path then
+              vim.cmd[config.cd_scope](info.path)
+            end
+            break
+          end
+        end
+      end,
+    })
+  end
+
   local path = require("pigit.repos").resolve_path(config.repos_json_path)
   local stop_watcher = require("pigit.repos").watch(path, function()
     utils.log("debug", "repos.json changed on disk, invalidating cache")
