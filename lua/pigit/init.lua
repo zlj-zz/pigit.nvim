@@ -70,6 +70,15 @@ function M.setup(opts)
     })
   end, { nargs = "?", desc = "Open git status picker for current or specified repo" })
 
+  vim.api.nvim_create_user_command("PigitTerm", function(cmd_opts)
+    local repo, err = require("pigit.utils").resolve_repo({ repo_name = cmd_opts.args ~= "" and cmd_opts.args or nil })
+    if not repo then
+      vim.notify(err or "pigit: unknown repo", vim.log.levels.ERROR)
+      return
+    end
+    require("pigit.terminal").open({ cwd = repo.path, cmd = "pigit" })
+  end, { nargs = "?", desc = "Run pigit TUI in floating terminal for current or specified repo" })
+
   local config = require("pigit.config").get()
 
   if config.auto_cd_on_open then

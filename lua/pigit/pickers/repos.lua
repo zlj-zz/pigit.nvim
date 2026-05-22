@@ -251,6 +251,11 @@ function M.open(opts)
         status_picker.open({ repo = value })
       end), { buffer = prompt_bufnr, nowait = true })
 
+      vim.keymap.set("i", "<C-\\>", with_selection(function(value)
+        require("pigit.utils").log("debug", "pigit TUI opened for: %s", value.name)
+        require("pigit.terminal").open({ cwd = value.path, cmd = "pigit" })
+      end), { buffer = prompt_bufnr, nowait = true })
+
       return true
     end,
     on_complete = {

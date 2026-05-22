@@ -28,6 +28,12 @@ local M = {}
 ---@field before_leave fun(repo: {name: string, path: string})|fun()
 ---@field after_refresh fun()|fun()
 
+---@class PigitTerminalConfig
+---@field width_ratio number
+---@field height_ratio number
+---@field border string|table
+---@field auto_close boolean
+
 ---@class PigitConfig
 ---@field repos_json_path string|nil
 ---@field cd_scope "tcd"|"cd"|"lcd"
@@ -48,6 +54,7 @@ local M = {}
 ---@field messages table<string, string>
 ---@field mappings table<string, table>
 ---@field hooks PigitHooksConfig
+---@field terminal PigitTerminalConfig
 
 -- Deep copy to prevent user modifications from affecting defaults
 local function deep_copy(t)
@@ -120,6 +127,12 @@ M.defaults = {
     branch_checkout_success = "pigit: checked out %s",
     no_branches = "(no branches)",
     no_status_changes = "(no changes)",
+  },
+  terminal = {
+    width_ratio = 0.9,
+    height_ratio = 0.9,
+    border = "rounded",
+    auto_close = true,
   },
   mappings = {
     repos = {},
