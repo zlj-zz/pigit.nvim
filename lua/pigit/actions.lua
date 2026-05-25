@@ -99,11 +99,37 @@ function M.run_pigit_cmd(repo, cmd)
 	require("pigit.git").run_cmd({ "pigit", "repo", cmd, repo.name }, repo.path, handle_result)
 end
 
+---Close all normal (non-special) file buffers that have no unsaved changes.
+-- Collects targets first to avoid mutating the list while iterating (ipairs
+-- skips elements when the underlying buffer list changes). Switches away
+-- from the current buffer before deleting it so that window layout stays
+-- stable and BufEnter autocmds fire on a surviving buffer rather than on
+-- a scratch buffer. name ~= "" excludes scratch buffers created by plugins.
 function M.close_buffers()
+	local to_close = {}
 	for _, buf in ipairs(vim.fn.getbufinfo({ bufloaded = 1 })) do
 		local buftype = vim.fn.getbufvar(buf.bufnr, "&buftype")
-		if buftype == "" and buf.changed == 0 then
-			pcall(vim.api.nvim_buf_delete, buf.bufnr, {})
+		local name = vim.api.nvim_buf_get_name(buf.bufnr)
+		if buftype == "" and buf.changed == 0 and name ~= "" then
+			to_close[buf.bufnr] = true
+		end
+	end
+
+	-- Switch to a buffer that will survive so the window does not collapse
+	-- or land on a scratch buffer, which can trigger heavy autocmd chains.
+	local current = vim.api.nvim_get_current_buf()
+	if to_close[current] then
+		for _, buf in ipairs(vim.fn.getbufinfo({ bufloaded = 1 })) do
+			if not to_close[buf.bufnr] then
+				vim.api.nvim_set_current_buf(buf.bufnr)
+				break
+			end
+		end
+	end
+
+	for bufnr, _ in pairs(to_close) do
+		if vim.api.nvim_buf_is_valid(bufnr) then
+			pcall(vim.api.nvim_buf_delete, bufnr, { force = true })
 		end
 	end
 end
